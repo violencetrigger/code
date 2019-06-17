@@ -646,10 +646,10 @@ void Calculator::square()
         QString square = ui->MainDisplay->text();
         double dResult = pow(square.toDouble(), 2);
         if (!wasEqualButton) {
-            inputHistory("sqrt(" + square + ")");
+            inputHistory("sqr(" + square + ")");
         } else {
             clear();
-            inputHistory("sqrt(" + square + ")");
+            inputHistory("sqr(" + square + ")");
         }
         ui->MainDisplay->setText(QString::number(dResult, 'g', 14));
     }
