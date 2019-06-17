@@ -107,8 +107,8 @@ void Calculator::numPressed()
         ui->MainDisplay->setText("");
         sequence = false;
     }
-    // if result is more or less then zero
-    if (dResult > 0.0 || dResult < 0.0) {
+    // if last pressed button is equal button
+    if (wasEqualButton) {
         // and expression dont contains math sign or dot
         if (!mathSign && !dotEntered) {
             // clear all for later input
@@ -153,8 +153,8 @@ void Calculator::numPressed()
         // new string is addition of two string
         // current display value and pressed button
         QString qstrNewValue = qstrDisplayValue + qstrButtonValue;
-        // if the string has more then 15 digits
-        if ( !(qstrNewValue.length() >= 15) ) {
+        // if the string has more then 14 digits
+        if ( !(qstrNewValue.length() >= 14) ) {
             // stops adding new values
             // keep showing current value in main display
             ui->MainDisplay->setText(qstrNewValue);
@@ -168,10 +168,10 @@ void Calculator::numPressed()
         QString qstrNewValue = qstrDisplayValue + qstrButtonValue;
         double dNewValue = qstrNewValue.toDouble();
 
-        // set value in display and allow up to 15 digits
-        if (! (dNewValue >= 1e015) ) {
-            ui->MainDisplay->setText(QString::number(dNewValue, 'g', 15));
-            QString strNewValue = QString::number(dNewValue, 'g', 15);
+        // set value in display and allow up to 14 digits
+        if (! (dNewValue >= 1e014) ) {
+            ui->MainDisplay->setText(QString::number(dNewValue, 'g', 14));
+            QString strNewValue = QString::number(dNewValue, 'g', 14);
             // call a function that keeps the entered value
             inputHistory(strNewValue);
         }
@@ -200,7 +200,7 @@ void Calculator::mathButtonPressed()
         // clear value
         ui->SideDisplay->setText("");
         // change string that keeps input to result value
-        qstrInputKeeper = QString::number(dResult, 'g', 15);
+        qstrInputKeeper = QString::number(dResult, 'g', 14);
         // math expression will have a math sign
         mathSign = true;
         // sequence protection
@@ -302,7 +302,7 @@ void Calculator::mathButtonPressed()
     // if there's no sequence or math symbol was latest input
     // and expression don't has a dot
    if ( (!sequence || wasMathSign) && !dotEntered) {
-        if (ui->MainDisplay->text().length() >= 15) {
+        if (ui->MainDisplay->text().length() >= 14) {
             // clear main display
              ui->MainDisplay->setText("");
             // set result in display and allow up to 10 digits
@@ -311,13 +311,19 @@ void Calculator::mathButtonPressed()
         } else {
             // clear main display
              ui->MainDisplay->setText("");
-            // set result in display and allow up to 15 digits
+            // set result in display and allow up to 14 digits
             // before using exponents
-            ui->MainDisplay->setText(QString::number(dResult, 'g', 15));
+            ui->MainDisplay->setText(QString::number(dResult, 'g', 14));
         }
     } else {
        // clear main display without any other actions
         ui->MainDisplay->setText("");
+    }
+    if (dResult >= 1e+300 || dResult <= (-1e+300)) {
+       // clear all
+       clear();
+       // set the message to main display
+       ui->MainDisplay->setText("Overflow");
     }
 }
 
@@ -370,11 +376,11 @@ void Calculator::equalButtonPressed()
     // put result in display
     // if division by zero was not detected
     if (!divisionByZero) {
-        // set result in display and allow up to 15
+        // set result in display and allow up to 14
         // digits before using exponents
-        ui->MainDisplay->setText(QString::number(dResult, 'g', 15));
-        if (ui->MainDisplay->text().length() > 15) {
-            // set result in display and allow up to 15
+        ui->MainDisplay->setText(QString::number(dResult, 'g', 14));
+        if (ui->MainDisplay->text().length() > 14) {
+            // set result in display and allow up to 14
             // digits before using exponents
             ui->MainDisplay->setText(QString::number(dResult, 'g', 10));
         }
@@ -390,13 +396,13 @@ void Calculator::equalButtonPressed()
             qstrInputKeeper = "";
             qstrSecondInputKeeper = "";
             // call a function that keeps the entered value
-            inputHistory(QString::number(dResult, 'g', 15));
+            inputHistory(QString::number(dResult, 'g', 14));
         }
     } else { // if division by zero, set the message to main display
         ui->MainDisplay->setText("Division by zero");
     }
-    // if result is more then 1e+300
-    if (dResult >= 1e+300) {
+    // if result is more then 1e+300 or less then 1e-300
+    if (dResult >= 1e+300 || dResult <= (-1e+300)) {
         // clear all
         clear();
         // set the message to main display
@@ -542,27 +548,35 @@ void Calculator::backspace()
 {
     QString qstrDisplayValue = ui->MainDisplay->text();
     // chop(n) emoves n characters from the end of the string
-    if (qstrInputKeeper.length() >= 1) {
+    if (ui->MainDisplay->text().length() >= 1 && qstrInputKeeper.length() >= 1) {
         // do not delete the math sign
         if (!wasMathSign
                 && (qstrInputKeeper[qstrInputKeeper.length() - 1] !=  "*"
                 && qstrInputKeeper[qstrInputKeeper.length() - 1] !=  "/"
                 && qstrInputKeeper[qstrInputKeeper.length() - 1] !=  "+"
                 && qstrInputKeeper[qstrInputKeeper.length() - 1] !=  "-") ) {
-            // delete rightmost in main character
+            // delete rightmost character in main display
             qstrDisplayValue.chop(1);
             // if string is empty, set '0' in display
             if (qstrDisplayValue.isEmpty()) {
                 qstrDisplayValue = "0";
             }
-            // delete rightmost character in side display
-            qstrInputKeeper.chop(1);
-            if (qstrInputKeeper.isEmpty()) {
-                qstrInputKeeper = "";
-            }
-            // set both displays
-            ui->SideDisplay->setText(qstrInputKeeper);
+            // set main display
             ui->MainDisplay->setText(qstrDisplayValue);
+            // delete rightmost character in side display
+            // if equal button was not pressed before
+            if (!wasEqualButton
+                    && qstrInputKeeper[qstrInputKeeper.length() - 1] !=  ")") {
+                if (qstrInputKeeper.length() == 1) {
+                    qstrInputKeeper = "";
+                } else {
+                    qstrInputKeeper.chop(1);
+                }
+                    ui->SideDisplay->setText(qstrInputKeeper);
+            } else {
+                clear();
+                qstrInputKeeper = "0";
+            }
         }
     }
 }
@@ -611,8 +625,13 @@ void Calculator::squareRoot()
         // extract square root by using sqrt function from <cmath>
         QString sqrtRoot = ui->MainDisplay->text();
         double dResult = sqrt(sqrtRoot.toDouble());
-        ui->MainDisplay->setText(QString::number(dResult, 'g', 15));
-        inputHistory("sqrt(" + sqrtRoot + ")");
+        if (!wasEqualButton) {
+            inputHistory("sqrt(" + sqrtRoot + ")");
+        } else {
+            clear();
+            inputHistory("sqrt(" + sqrtRoot + ")");
+        }
+        ui->MainDisplay->setText(QString::number(dResult, 'g', 14));
     }
 }
 
@@ -626,8 +645,13 @@ void Calculator::square()
         // finding square degree of the value by using sqr function from <cmath>
         QString square = ui->MainDisplay->text();
         double dResult = pow(square.toDouble(), 2);
-        ui->MainDisplay->setText(QString::number(dResult, 'g', 15));
-        inputHistory("sqr(" + square + ")");
+        if (!wasEqualButton) {
+            inputHistory("sqrt(" + square + ")");
+        } else {
+            clear();
+            inputHistory("sqrt(" + square + ")");
+        }
+        ui->MainDisplay->setText(QString::number(dResult, 'g', 14));
     }
 }
 
